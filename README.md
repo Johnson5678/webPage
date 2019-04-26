@@ -1,7 +1,7 @@
 # blossom001
 
 
-
+//Deliverable 2
 MainPage: "localhost:3000/"
 
 Task 1: Using "localhost:3000/users/all" to get all users infomation
@@ -20,5 +20,10 @@ Task 6: Using "localhost:3000/users/:username" to get user infomation by usernam
 
 Task 7: Using username and password to check whether the user is sucessful logIn (Post)
 
+//Deliverable 3
+MainPage: "localhost:3000/"
+
+The aethetic design of the website
+Function achieved: Selecting category and displaying corresponding news (fake)
 
 ....
