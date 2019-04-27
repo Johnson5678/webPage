@@ -25,5 +25,5 @@ MainPage: "localhost:3000/"
 
 The aethetic design of the website
 Function achieved: Selecting category and displaying corresponding news (fake)
-
+Successfully deployed function with heroku: https://webpagepro.herokuapp.com/
 ....
