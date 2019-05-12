@@ -1,10 +1,18 @@
 const mongoose = require('mongoose');
 const User = mongoose.model('users');
-const fakeNews = mongoose.model('fakenews');
+const News = mongoose.model('news');
+const NewsAPI = require('newsapi');
+const newsapi = new NewsAPI('abf08a911e534e629682c3098dc1b9ca');
+var session = require('express-session');
+var identityKey = 'skey';
+
+
 
 //the main Page
 let mainPage = function(req, res) {
-    res.send("Welcome to Blossom");
+    res.render('index',{
+        title: "BlossomNews"
+    });
 };
 
 // Push 4 users and save to database.
@@ -26,7 +34,7 @@ let createAdmin = function(req, res) {
     });
 };
 
-//find all users 
+//find all users
 let allUsers = function(req, res) {
     User.find(function(err, allUsers) {
         if (!err) {
@@ -37,20 +45,62 @@ let allUsers = function(req, res) {
     });
 };
 
+let login = function(req,res){
+    var loginUser = session.loginUser;
+    var isLogined = !!loginUser;
+
+    if(isLogined){
+        res.render('logined',{
+            title: "loginned",
+            name: loginUser || ''
+        });
+    }
+    else{
+        res.render('login',{
+            title: "login"
+        });
+    }
+    
+    
+};
+
+
 //check logIn system with username & password
 let checkUser = function(req, res){
     var userName = req.body.username;
     var passWord = req.body.password;
 
     User.findOne({username: userName, password: passWord}, function(err, user){
-        if(user){
-            res.send("Successfully LogIn");
+        if(!err){
+
+            session.loginUser = userName;
+            if(user){
+                res.render('index',{
+                    title: "BlossomNews"
+                });
+            }else{
+                var loginUser = session.loginUser;
+                res.render('login',{
+                    title: "login",
+                    isLogined: !!loginUser,
+                    name: loginUser || ''
+                });
+            }
+            
+            
         }else{
-            res.send("Fail to LogIn");
+            res.sendStatus(400);
         }
     });
-
 }
+
+
+var logout = function(req, res, next){
+	session.loginUser = null;
+    res.clearCookie(identityKey);
+    res.redirect('/');
+}
+
 
 //check one userinfomation by username
 let getinfoByUsername = function(req, res) {
@@ -64,72 +114,141 @@ let getinfoByUsername = function(req, res) {
     });
 };
 
+
+
+
+
+
 // first create news
 let createNews = function(req, res) {
-    let fakeNews = new fakeNews(
+  
+    let news = new News(
         {
+            "id": req.body.id,
+            "description": req.body.description,
+            "url": req.body.url,
             "category": req.body.category,
-            "title": req.body.title,
-            "length": req.body.length,
             "dates": req.body.dates
         }
     );
-
-    news.save(function(err, newfakeNews) {
+    
+    news.save(function(err, newNews) {
         if (!err) {
-            res.json(newfakeNews);
+            res.json(newNews);
         } else {
             res.sendStatus(400);
         }
     });
+
 };
+
 //check all the news
 let allNews = function(req, res) {
-    fakeNews.find(function(err, allfakeNews) {
+    News.find(function(err, allNews) {
         if (!err) {
-            res.send(allfakeNews);
+            res.send(allNews);
         } else {
             res.sendStatus(400);
         }
     });
 };
 
+let addNews = function(req, res){
+
+    newsapi.v2.sources({
+        category: 'health'
+    }).then(response => {
+        let newsArray = response.sources;
+        console.log(response.sources);
+        for (let i = 0; i < 9; i++) {
+            let news = new News(
+                {
+                    "id": newsArray[i].id,
+                    "description": newsArray[i].description,
+                    "url": newsArray[i].url,
+                    "category": newsArray[i].category,
+                    "dates": newsArray[i].dates
+                }
+            );
+            news.save(function(err, newnews) {
+                if (err) {
+                    res.sendStatus(400);
+                }
+            });
+        }
+    });
+};
 
 //find news by category
-var findOneNews = function(req, res) {
+var findOneCategoryNews = function(req, res) {
     var newscategory = req.params.category;
-    fakeNews.find({category:newscategory}, function(err, fakenews) {
+    News.find({category:newscategory}, function(err, news) {
         if (err) {
             res.send("No matching Found!");
         }else{
-            res.send(fakenews);
+            res.render('news', {
+                title: newscategory,
+                news: news
+            });
         }
     });
 };
 
-//get newest news
-var getNewestNews = function(req, res) {
-    var newstime = req.params.dates;
-    fakeNews.find({dates:newstime}, function(err, fakenews){
-        if (newstime>=2018-01-01 || !err){
-            res.send(fakenews);
+//check news by url
+var findUrl = function(req, res) {
+    var newsdescription = req.params.description;
+    var newscat = req.params.category;
+    News.find({category: newscat, description:newsdescription}, function(err, thenews) {
+        if (err) {
+            res.send("No matching Found!");
         }else{
-            res.sendStatus(500);
+            res.redirect(thenews[0].url);
         }
-
     });
-    
-}
+};
+
+
+//update liked news for users
+// let updateLikedNews = function(req, res){
+//     var newsitem = {
+//         "id": req.body.id, 
+//         "url": req.body.url, 
+//         "catagory":req.body.catagory
+//     }
+//     User.updateOne({})
+
+
+// }
+
+//get newest news
+//var getNewestNews = function (req, res) {
+    //var newstime = req.params.dates;
+    //News.find({ dates: newstime }, function (err, news) {
+        //if (newstime >= 2018 - 1 - 1 || !err) {
+            //res.send(news);
+        //} else {
+            //res.sendStatus(500);
+        //}
+
+    //});
+
+//};
+
 
 module.exports.mainPage = mainPage;
 
 //user
+module.exports.login = login;
+module.exports.logout = logout;
 module.exports.createAdmin = createAdmin;
 module.exports.allUsers = allUsers;
 module.exports.checkUser = checkUser;
 module.exports.getinfoByUsername = getinfoByUsername;
+
 //News
 module.exports.allNews = allNews;
 module.exports.createNews = createNews;
-module.exports.findOneNews = findOneNews;
-module.exports.getNewestNews = getNewestNews;
+module.exports.addNews = addNews;
+module.exports.findOneCategoryNews = findOneCategoryNews;
+module.exports.findUrl = findUrl;
+//module.exports.getNewestNews = getNewestNews;
